@@ -1,0 +1,75 @@
+esphome:
+  name: flowerpower-bridge
+  friendly_name: Flower Power bridge
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+api:
+logger:
+ota:
+  - platform: esphome
+
+external_components:
+  - source: github://ogrums/esphome-flowerpower@main
+    components: [flowerpower]
+    refresh: 1d
+
+esp32_ble_tracker:
+
+ble_client:
+  - mac_address: A0:14:3D:00:00:00   # MAC du Flower Power
+    id: fp_client
+    auto_connect: false
+
+time:
+  - platform: sntp
+    id: sntp_time
+
+flowerpower:
+  - ble_client_id: fp_client
+    id: fp
+    update_interval: 30min
+    fetch_history: true
+    history_publish_limit: 500
+    air_temperature:
+      name: "Flower Power température air"
+    soil_temperature:
+      name: "Flower Power température sol"
+    soil_moisture:
+      name: "Flower Power humidité sol"
+    sunlight:
+      name: "Flower Power lumière"
+    soil_ec:
+      name: "Flower Power EC sol"
+    battery_level:
+      name: "Flower Power batterie"
+    history_entries:
+      name: "Flower Power échantillons reçus"
+    session_period:
+      name: "Flower Power période session"
+    firmware_revision:
+      name: "Flower Power firmware"
+    history_sample:
+      name: "Flower Power échantillon historique"
+
+switch:
+  - platform: template
+    name: "Flower Power LED"
+    optimistic: true
+    turn_on_action:
+      - lambda: "id(fp).set_led(true);"
+    turn_off_action:
+      - lambda: "id(fp).set_led(false);"
+
+button:
+  - platform: template
+    name: "Flower Power synchroniser"
+    on_press:
+      - lambda: "id(fp).sync_now();"

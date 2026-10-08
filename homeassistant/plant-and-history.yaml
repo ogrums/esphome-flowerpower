@@ -1,0 +1,33 @@
+# Exemple Home Assistant. Les entity_id suivent les noms de l'exemple ESPHome.
+
+plant:
+  - name: Plante Flower Power
+    sensors:
+      moisture: sensor.flower_power_humidite_sol
+      temperature: sensor.flower_power_temperature_air
+      conductivity: sensor.flower_power_ec_sol
+      brightness: sensor.flower_power_lumiere
+    min_moisture: 15
+    max_moisture: 60
+    min_temperature: 10
+    max_temperature: 32
+    min_conductivity: 350
+    max_conductivity: 2000
+
+automation:
+  - alias: Flower Power relai historique
+    description: >
+      Chaque échantillon nouveau du capteur est un JSON avec son vrai timestamp.
+      Le recorder HA date les états à l'arrivée : pour un graphe rétrodaté,
+      pousser payload vers InfluxDB / VictoriaMetrics.
+    triggers:
+      - trigger: state
+        entity_id: sensor.flower_power_echantillon_historique
+        not_to:
+          - unknown
+          - unavailable
+          - ""
+    actions:
+      - event: flowerpower_history
+        event_data:
+          payload: "{{ trigger.to_state.state }}"
