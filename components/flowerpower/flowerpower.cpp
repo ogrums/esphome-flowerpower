@@ -248,8 +248,8 @@ void FlowerPower::on_read_(uint16_t handle, const uint8_t *data, uint16_t len) {
   else if (handle == this->h_session_ && len >= 2)
     this->session_id_ = le16(data);
   else if (handle == this->h_period_ && len >= 2) {
-    this->session_period_ = le16(data);
-    this->publish_(this->session_period_, this->session_period_);
+    this->session_period_s_ = le16(data);
+    this->publish_(this->session_period_, this->session_period_s_);
   } else if (handle == this->h_water_level_ && len >= 1)
     this->publish_(this->water_level_, data[0]);
   else if (handle == this->h_water_status_ && len >= 1)
@@ -275,10 +275,17 @@ void FlowerPower::start_history_() {
     return;
   }
   ESP_LOGI(TAG, "Historique: start=%u last=%u session=%u period=%us", start, this->last_index_,
-           this->session_id_, this->session_period_);
+           this->session_id_, this->session_period_s_);
   this->write_u32_le_(this->h_start_, start);
-  this->parent()->register_for_notify(this->h_tx_);
-  this->parent()->register_for_notify(this->h_tx_status_);
+  esp_ble_gattc_register_for_notify(this->parent()->get_gattc_if(), this->parent()->get_remote_bda(), this->h_tx_);
+  esp_ble_gattc_register_for_notify(this->parent()->get_gattc_if(), this->parent()->get_remote_bda(),
+                                    this->h_tx_status_);
+  uint8_t cccd[2] = {0x01, 0x00};
+  esp_ble_gattc_write_char_descr(this->parent()->get_gattc_if(), this->parent()->get_conn_id(), this->h_tx_ + 1,
+                                 sizeof(cccd), cccd, ESP_GATT_WRITE_TYPE_RSP, ESP_GATT_AUTH_REQ_NONE);
+  esp_ble_gattc_write_char_descr(this->parent()->get_gattc_if(), this->parent()->get_conn_id(),
+                                 this->h_tx_status_ + 1, sizeof(cccd), cccd, ESP_GATT_WRITE_TYPE_RSP,
+                                 ESP_GATT_AUTH_REQ_NONE);
 }
 
 void FlowerPower::ack_(bool ok) {
@@ -340,7 +347,7 @@ void FlowerPower::parse_and_queue_() {
   uint16_t last_i = be16(h + 10);
   uint16_t period = be16(h + 14);
   if (period == 0)
-    period = this->session_period_ == 0 ? 900 : this->session_period_;
+    period = this->session_period_s_ == 0 ? 900 : this->session_period_s_;
   uint32_t now = static_cast<uint32_t>(::time(nullptr));
   if (now < 1700000000)
     now = 0;

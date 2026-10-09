@@ -19,6 +19,7 @@ from esphome.const import (
 
 DEPENDENCIES = ["ble_client"]
 AUTO_LOAD = ["sensor", "text_sensor"]
+MULTI_CONF = True
 
 flowerpower_ns = cg.esphome_ns.namespace("flowerpower")
 FlowerPower = flowerpower_ns.class_(

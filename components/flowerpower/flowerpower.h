@@ -77,7 +77,7 @@ class FlowerPower : public PollingComponent, public ble_client::BLEClientNode {
   uint16_t nb_entries_{0};
   uint32_t last_index_{0};
   uint16_t session_id_{0};
-  uint16_t session_period_{0};
+  uint16_t session_period_s_{0};
   uint32_t last_synced_index_{0};
   ESPPreferenceObject pref_;
 
