@@ -1,6 +1,6 @@
 # esphome-flowerpower
 
-Composant ESPHome pour un **Parrot Flower Power** (BLE). Il lit les mesures live et l'historique stocké dans le capteur jusqu'à saturation de sa mémoire.
+Composant ESPHome pour un **Parrot Flower Power** et un **Parrot Pot** (BLE). Mesures live, historique interne, et sur le Pot : niveau de cuve et pompe.
 
 Pas encore proposé à la communauté ESPHome. Usage privé via `external_components`.
 
@@ -59,6 +59,13 @@ flowerpower:
       name: "Flower Power firmware"
     history_sample:
       name: "Flower Power échantillon historique"
+    # Parrot Pot uniquement (service 39e1F900). Absents sur un Flower Power.
+    water_level:
+      name: "Parrot Pot niveau cuve"
+    watering_status:
+      name: "Parrot Pot état arrosage"
+    watering_mode:
+      name: "Parrot Pot mode arrosage"
 ```
 
 `history_publish_limit: 0` publie tout le rattrapage (peut faire des centaines d'états Home Assistant). `500` est un plafond par session. L'index déjà synchronisé est mémorisé dans la flash de l'ESP : les sessions suivantes ne reprennent que le delta.
@@ -74,7 +81,28 @@ switch:
       - lambda: 'id(fp).set_led(true);'
     turn_off_action:
       - lambda: 'id(fp).set_led(false);'
+
+button:
+  - platform: template
+    name: "Parrot Pot arroser"
+    on_press:
+      - lambda: 'id(fp).water_now(8);'
 ```
+
+## Parrot Pot
+
+Le Pot réutilise le GATT Flower Power et ajoute le service d'arrosage `39e1F900-84a8-11e2-afba-0002a5d5c51b`.
+
+| UUID | Accès | Rôle documenté |
+| --- | --- | --- |
+| `F907` | read/notify | niveau de cuve, % |
+| `F906` | write | déclenchement manuel de la pompe |
+| `F912` | read/write | état d'arrosage (valeur brute) |
+| `F90D` | read/write | mode d'arrosage (valeur brute) |
+
+Cuve 2,2 L. Seuil bas utilisé par les apps : 15 %. `water_now(8)` écrit un octet sur `F906` (durée en secondes, défaut 1). Ce payload n'est pas dans la spec Parrot publique : à confirmer sur ton Pot. Les modes produit sont Manual, Perfect Drop, Plant Sitter et Custom ; leurs codes numériques ne sont pas publiés, le capteur expose donc la valeur brute.
+
+Les autres caractéristiques `F901`–`F905`, `F908`, `F910`–`F911` sont listées par WatchFlower sans description. Elles ne sont pas écrites.
 
 ## Home Assistant
 
@@ -125,3 +153,5 @@ Pour un vrai graphe rétrodaté, envoyer ce JSON vers InfluxDB ou VictoriaMetric
 - Le format de trame de transport suit l'implémentation de terrain (index little-endian), pas la mention « big endian » ambiguë de la spec Parrot.
 - Le corps du fichier historique est big-endian (en-tête 16 octets, échantillon 12 octets), comme les décodeurs publics.
 - À valider sur le firmware exact du capteur au premier flash : logger en `DEBUG`.
+- La pompe n'existe pas sur un Flower Power. Un write `F906` y est ignoré si la caractéristique est absente.
+- Reverse : un dump ou un log nRF Connect du Pot peut identifier les octets de `F906` et l'énumération de `F90D`. Le firmware Flower Power seul ne contient pas la pompe.

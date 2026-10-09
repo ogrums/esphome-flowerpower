@@ -19,6 +19,7 @@ static const char *const LIVE_SVC = "39e1fa00-84a8-11e2-afba-0002a5d5c51b";
 static const char *const UPLOAD_SVC = "39e1fb00-84a8-11e2-afba-0002a5d5c51b";
 static const char *const HISTORY_SVC = "39e1fc00-84a8-11e2-afba-0002a5d5c51b";
 static const char *const CLOCK_SVC = "39e1fd00-84a8-11e2-afba-0002a5d5c51b";
+static const char *const WATER_SVC = "39e1f900-84a8-11e2-afba-0002a5d5c51b";
 
 class FlowerPower : public PollingComponent, public ble_client::BLEClientNode {
  public:
@@ -41,8 +42,12 @@ class FlowerPower : public PollingComponent, public ble_client::BLEClientNode {
   void set_session_period_sensor(sensor::Sensor *s) { this->session_period_ = s; }
   void set_firmware_sensor(text_sensor::TextSensor *s) { this->firmware_ = s; }
   void set_history_sample_sensor(text_sensor::TextSensor *s) { this->history_sample_ = s; }
+  void set_water_level_sensor(sensor::Sensor *s) { this->water_level_ = s; }
+  void set_watering_status_sensor(sensor::Sensor *s) { this->watering_status_ = s; }
+  void set_watering_mode_sensor(sensor::Sensor *s) { this->watering_mode_ = s; }
 
   void set_led(bool on);
+  void water_now(uint8_t seconds = 1);
   void sync_now();
 
  protected:
@@ -56,12 +61,17 @@ class FlowerPower : public PollingComponent, public ble_client::BLEClientNode {
   sensor::Sensor *session_period_{nullptr};
   text_sensor::TextSensor *firmware_{nullptr};
   text_sensor::TextSensor *history_sample_{nullptr};
+  sensor::Sensor *water_level_{nullptr};
+  sensor::Sensor *watering_status_{nullptr};
+  sensor::Sensor *watering_mode_{nullptr};
 
   bool fetch_history_{true};
   uint16_t history_publish_limit_{500};
   bool busy_{false};
   bool led_pending_{false};
   bool led_value_{false};
+  bool water_pending_{false};
+  uint8_t water_seconds_{1};
   uint32_t last_activity_{0};
   uint32_t clock_s_{0};
   uint16_t nb_entries_{0};
@@ -92,6 +102,10 @@ class FlowerPower : public PollingComponent, public ble_client::BLEClientNode {
   uint16_t h_tx_{0};
   uint16_t h_tx_status_{0};
   uint16_t h_rx_{0};
+  uint16_t h_water_level_{0};
+  uint16_t h_water_trigger_{0};
+  uint16_t h_water_status_{0};
+  uint16_t h_water_mode_{0};
 
   uint8_t read_step_{0};
   uint8_t notify_ready_{0};

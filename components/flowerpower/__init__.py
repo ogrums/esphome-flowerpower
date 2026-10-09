@@ -35,6 +35,9 @@ CONF_HISTORY_ENTRIES = "history_entries"
 CONF_SESSION_PERIOD = "session_period"
 CONF_FIRMWARE = "firmware_revision"
 CONF_HISTORY_SAMPLE = "history_sample"
+CONF_WATER_LEVEL = "water_level"
+CONF_WATERING_STATUS = "watering_status"
+CONF_WATERING_MODE = "watering_mode"
 CONF_FETCH_HISTORY = "fetch_history"
 CONF_HISTORY_PUBLISH_LIMIT = "history_publish_limit"
 
@@ -65,6 +68,9 @@ CONFIG_SCHEMA = (
             cv.Optional(CONF_BATTERY): _sensor(UNIT_PERCENT, 0, DEVICE_CLASS_BATTERY),
             cv.Optional(CONF_HISTORY_ENTRIES): _sensor(UNIT_EMPTY, 0, icon="mdi:database"),
             cv.Optional(CONF_SESSION_PERIOD): _sensor(UNIT_SECOND, 0, DEVICE_CLASS_DURATION),
+            cv.Optional(CONF_WATER_LEVEL): _sensor(UNIT_PERCENT, 0, icon="mdi:water"),
+            cv.Optional(CONF_WATERING_STATUS): _sensor(UNIT_EMPTY, 0, icon="mdi:pump"),
+            cv.Optional(CONF_WATERING_MODE): _sensor(UNIT_EMPTY, 0, icon="mdi:water-sync"),
             cv.Optional(CONF_FIRMWARE): text_sensor.text_sensor_schema(icon="mdi:chip"),
             cv.Optional(CONF_HISTORY_SAMPLE): text_sensor.text_sensor_schema(
                 icon="mdi:timeline-clock-outline"
@@ -92,6 +98,9 @@ async def to_code(config):
         (CONF_BATTERY, var.set_battery_sensor, sensor.new_sensor),
         (CONF_HISTORY_ENTRIES, var.set_history_entries_sensor, sensor.new_sensor),
         (CONF_SESSION_PERIOD, var.set_session_period_sensor, sensor.new_sensor),
+        (CONF_WATER_LEVEL, var.set_water_level_sensor, sensor.new_sensor),
+        (CONF_WATERING_STATUS, var.set_watering_status_sensor, sensor.new_sensor),
+        (CONF_WATERING_MODE, var.set_watering_mode_sensor, sensor.new_sensor),
         (CONF_FIRMWARE, var.set_firmware_sensor, text_sensor.new_text_sensor),
         (CONF_HISTORY_SAMPLE, var.set_history_sample_sensor, text_sensor.new_text_sensor),
     ]

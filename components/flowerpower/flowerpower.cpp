@@ -87,6 +87,19 @@ void FlowerPower::set_led(bool on) {
     this->sync_now();
 }
 
+void FlowerPower::water_now(uint8_t seconds) {
+  this->water_pending_ = true;
+  this->water_seconds_ = seconds == 0 ? 1 : seconds;
+  if (this->h_water_trigger_ == 0 && !this->busy_) {
+    this->sync_now();
+    return;
+  }
+  if (this->parent()->connected() && this->h_water_trigger_ != 0)
+    this->write_u8_(this->h_water_trigger_, this->water_seconds_);
+  else if (!this->busy_)
+    this->sync_now();
+}
+
 void FlowerPower::publish_(sensor::Sensor *s, float v) {
   if (s != nullptr && std::isfinite(v))
     s->publish_state(v);
@@ -172,20 +185,27 @@ void FlowerPower::resolve_handles_() {
   this->h_tx_ = handle_of(p, UPLOAD_SVC, "39e1fb01-84a8-11e2-afba-0002a5d5c51b");
   this->h_tx_status_ = handle_of(p, UPLOAD_SVC, "39e1fb02-84a8-11e2-afba-0002a5d5c51b");
   this->h_rx_ = handle_of(p, UPLOAD_SVC, "39e1fb03-84a8-11e2-afba-0002a5d5c51b");
-  ESP_LOGD(TAG, "Handles live air=%u vwc=%u clock=%u hist nb=%u tx=%u", this->h_air_cal_, this->h_vwc_cal_,
-           this->h_clock_, this->h_nb_, this->h_tx_);
+  this->h_water_level_ = handle_of(p, WATER_SVC, "39e1f907-84a8-11e2-afba-0002a5d5c51b");
+  this->h_water_trigger_ = handle_of(p, WATER_SVC, "39e1f906-84a8-11e2-afba-0002a5d5c51b");
+  this->h_water_status_ = handle_of(p, WATER_SVC, "39e1f912-84a8-11e2-afba-0002a5d5c51b");
+  this->h_water_mode_ = handle_of(p, WATER_SVC, "39e1f90d-84a8-11e2-afba-0002a5d5c51b");
+  ESP_LOGD(TAG, "Handles live air=%u vwc=%u clock=%u hist nb=%u tx=%u eau=%u", this->h_air_cal_, this->h_vwc_cal_,
+           this->h_clock_, this->h_nb_, this->h_tx_, this->h_water_level_);
 }
 
 void FlowerPower::kick_reads_() {
   const uint16_t order[] = {this->h_battery_, this->h_fw_,     this->h_air_cal_, this->h_air_raw_,
                             this->h_soil_raw_, this->h_vwc_cal_, this->h_vwc_raw_, this->h_dli_cal_,
                             this->h_light_raw_, this->h_ecb_cal_, this->h_ec_raw_, this->h_clock_,
-                            this->h_nb_,       this->h_last_,    this->h_session_, this->h_period_};
+                            this->h_nb_,       this->h_last_,    this->h_session_, this->h_period_,
+                            this->h_water_level_, this->h_water_status_, this->h_water_mode_};
   while (this->read_step_ < sizeof(order) / sizeof(order[0]) && order[this->read_step_] == 0)
     this->read_step_++;
   if (this->read_step_ >= sizeof(order) / sizeof(order[0])) {
     if (this->led_pending_ && this->h_led_ != 0)
       this->write_u8_(this->h_led_, this->led_value_ ? 1 : 0);
+    if (this->water_pending_ && this->h_water_trigger_ != 0)
+      this->write_u8_(this->h_water_trigger_, this->water_seconds_ == 0 ? 1 : this->water_seconds_);
     if (this->fetch_history_)
       this->start_history_();
     else
@@ -230,7 +250,12 @@ void FlowerPower::on_read_(uint16_t handle, const uint8_t *data, uint16_t len) {
   else if (handle == this->h_period_ && len >= 2) {
     this->session_period_ = le16(data);
     this->publish_(this->session_period_, this->session_period_);
-  }
+  } else if (handle == this->h_water_level_ && len >= 1)
+    this->publish_(this->water_level_, data[0]);
+  else if (handle == this->h_water_status_ && len >= 1)
+    this->publish_(this->watering_status_, data[0]);
+  else if (handle == this->h_water_mode_ && len >= 1)
+    this->publish_(this->watering_mode_, data[0]);
   this->read_step_++;
   this->kick_reads_();
 }
@@ -356,6 +381,7 @@ void FlowerPower::finish_(bool ok) {
   ESP_LOGI(TAG, "Fin de session (%s)", ok ? "ok" : "échec");
   this->busy_ = false;
   this->led_pending_ = false;
+  this->water_pending_ = false;
   if (this->parent()->connected())
     this->parent()->disconnect();
 }

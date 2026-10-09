@@ -58,6 +58,12 @@ flowerpower:
       name: "Flower Power firmware"
     history_sample:
       name: "Flower Power échantillon historique"
+    water_level:
+      name: "Parrot Pot niveau cuve"
+    watering_status:
+      name: "Parrot Pot état arrosage"
+    watering_mode:
+      name: "Parrot Pot mode arrosage"
 
 switch:
   - platform: template
@@ -73,3 +79,7 @@ button:
     name: "Flower Power synchroniser"
     on_press:
       - lambda: "id(fp).sync_now();"
+  - platform: template
+    name: "Parrot Pot arroser"
+    on_press:
+      - lambda: "id(fp).water_now(8);"
